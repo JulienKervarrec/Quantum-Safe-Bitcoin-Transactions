@@ -265,7 +265,7 @@ def run_end_to_end(config, puzzle_r):
                 pub = stk.pop(); sig = stk.pop()
                 assert checksig(sig, pub, [sig]), f"CHECKSIGVERIFY failed ({config})"
                 checks += 1
-            elif v == 0xae:                                  # OP_CHECKMULTISIG, in order
+            elif v in (0xae, 0xaf):                          # OP_CHECKMULTISIG[VERIFY], in order
                 nk = dec_num(stk.pop()); pubs = [stk.pop() for _ in range(nk)][::-1]
                 ns = dec_num(stk.pop()); sigs = [stk.pop() for _ in range(ns)][::-1]
                 stk.pop()                                    # the OP_0 dummy
@@ -275,7 +275,8 @@ def run_end_to_end(config, puzzle_r):
                         si += 1
                         if checksig(sig, pubs[si-1], sigs): matched += 1; break
                 assert matched == ns, f"CHECKMULTISIG {matched}/{ns} ({config})"
-                checks += matched; cms += 1; stk.append(b'\x01')
+                checks += matched; cms += 1
+                if v == 0xae: stk.append(b'\x01')           # the VERIFY form leaves nothing
             else:
                 raise AssertionError(f"unhandled opcode 0x{v:02x}")
         assert cms == 2 and hors == st['t1s'] + st['t2s'] and stk and any(stk[-1])
